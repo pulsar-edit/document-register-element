@@ -429,47 +429,47 @@ function installCustomElements(window, polyfill) {'use strict';
       ]
     }
   }));
-  
-  
-    
+
+
+
   // passed at runtime, configurable via nodejs module
   if (typeof polyfill !== 'object') polyfill = {type: polyfill || 'auto'};
-  
+
   var
     // V0 polyfill entry
     REGISTER_ELEMENT = 'registerElement',
-  
+
     // pseudo-random number used as expando/unique name on feature detection
     UID = window.Math.random() * 10e4 >> 0,
-  
+
     // IE < 11 only + old WebKit for attributes + feature detection
     EXPANDO_UID = '__' + REGISTER_ELEMENT + UID,
-  
+
     // shortcuts and costants
     ADD_EVENT_LISTENER = 'addEventListener',
     ATTACHED = 'attached',
     CALLBACK = 'Callback',
     DETACHED = 'detached',
     EXTENDS = 'extends',
-  
+
     ATTRIBUTE_CHANGED_CALLBACK = 'attributeChanged' + CALLBACK,
     ATTACHED_CALLBACK = ATTACHED + CALLBACK,
     CONNECTED_CALLBACK = 'connected' + CALLBACK,
     DISCONNECTED_CALLBACK = 'disconnected' + CALLBACK,
     CREATED_CALLBACK = 'created' + CALLBACK,
     DETACHED_CALLBACK = DETACHED + CALLBACK,
-  
+
     ADDITION = 'ADDITION',
     MODIFICATION = 'MODIFICATION',
     REMOVAL = 'REMOVAL',
-  
+
     DOM_ATTR_MODIFIED = 'DOMAttrModified',
     DOM_CONTENT_LOADED = 'DOMContentLoaded',
     DOM_SUBTREE_MODIFIED = 'DOMSubtreeModified',
-  
+
     PREFIX_TAG = '<',
     PREFIX_IS = '=',
-  
+
     // valid and invalid node names
     validName = /^[A-Z][._A-Z0-9]*-[-._A-Z0-9]*$/,
     invalidNames = [
@@ -482,38 +482,39 @@ function installCustomElements(window, polyfill) {'use strict';
       'FONT-FACE-NAME',
       'MISSING-GLYPH'
     ],
-  
+
     // registered types and their prototypes
     types = [],
     protos = [],
-  
+    constrs = [],
+
     // to query subnodes
     query = '',
-  
+
     // html shortcut used to feature detect
     documentElement = document.documentElement,
-  
+
     // ES5 inline helpers || basic patches
     indexOf = types.indexOf || function (v) {
       for(var i = this.length; i-- && this[i] !== v;){}
       return i;
     },
-  
+
     // other helpers / shortcuts
     OP = Object.prototype,
     hOP = OP.hasOwnProperty,
     iPO = OP.isPrototypeOf,
-  
+
     defineProperty = Object.defineProperty,
     empty = [],
     gOPD = Object.getOwnPropertyDescriptor,
     gOPN = Object.getOwnPropertyNames,
     gPO = Object.getPrototypeOf,
     sPO = Object.setPrototypeOf,
-  
+
     // jshint proto: true
     hasProto = !!Object.__proto__,
-  
+
     // V1 helpers
     fixGetClass = false,
     DRECEV1 = '__dreCEv1',
@@ -567,13 +568,13 @@ function installCustomElements(window, polyfill) {'use strict';
     secondArgument = function (is) {
       return is.toLowerCase();
     },
-  
+
     // used to create unique instances
     create = Object.create || function Bridge(proto) {
       // silly broken polyfill probably ever used but short enough to work
       return proto ? ((Bridge.prototype = proto), new Bridge()) : this;
     },
-  
+
     // will set the prototype if possible
     // or copy over all properties
     setPrototype = sPO || (
@@ -611,27 +612,27 @@ function installCustomElements(window, polyfill) {'use strict';
           return o;
         }
     )),
-  
+
     // DOM shortcuts and helpers, if any
-  
+
     MutationObserver = window.MutationObserver ||
                        window.WebKitMutationObserver,
-  
+
     HTMLAnchorElement = window.HTMLAnchorElement,
-  
+
     HTMLElementPrototype = (
       window.HTMLElement ||
       window.Element ||
       window.Node
     ).prototype,
-  
+
     IE8 = !iPO.call(HTMLElementPrototype, documentElement),
-  
+
     safeProperty = IE8 ? function (o, k, d) {
       o[k] = d.value;
       return o;
     } : defineProperty,
-  
+
     isValidNode = IE8 ?
       function (node) {
         return node.nodeType === 1;
@@ -639,9 +640,9 @@ function installCustomElements(window, polyfill) {'use strict';
       function (node) {
         return iPO.call(HTMLElementPrototype, node);
       },
-  
+
     targets = IE8 && [],
-  
+
     attachShadow = HTMLElementPrototype.attachShadow,
     cloneNode = HTMLElementPrototype.cloneNode,
     closest = HTMLElementPrototype.closest || function (name) {
@@ -655,19 +656,19 @@ function installCustomElements(window, polyfill) {'use strict';
     hasAttribute = HTMLElementPrototype.hasAttribute,
     removeAttribute = HTMLElementPrototype.removeAttribute,
     setAttribute = HTMLElementPrototype.setAttribute,
-  
+
     // replaced later on
     createElement = document.createElement,
     importNode = document.importNode,
     patchedCreateElement = createElement,
-  
+
     // shared observer for all attributes
     attributesObserver = MutationObserver && {
       attributes: true,
       characterData: true,
       attributeOldValue: true
     },
-  
+
     // useful to detect only if there's no MutationObserver
     DOMAttrModified = MutationObserver || function(e) {
       doesNotSupportDOMAttrModified = false;
@@ -676,11 +677,11 @@ function installCustomElements(window, polyfill) {'use strict';
         DOMAttrModified
       );
     },
-  
+
     // will both be used to make DOMNodeInserted asynchronous
     asapQueue,
     asapTimer = 0,
-  
+
     // internal flags
     V0 = REGISTER_ELEMENT in document &&
          !/^force-all/.test(polyfill.type),
@@ -688,27 +689,27 @@ function installCustomElements(window, polyfill) {'use strict';
     justSetup = false,
     doesNotSupportDOMAttrModified = true,
     dropDomContentLoaded = true,
-  
+
     // needed for the innerHTML helper
     notFromInnerHTMLHelper = true,
-  
+
     // optionally defined later on
     onSubtreeModified,
     callDOMAttrModified,
     getAttributesMirror,
     observer,
     observe,
-  
+
     // based on setting prototype capability
     // will check proto or the expando attribute
     // in order to setup the node once
     patchIfNotAlready,
     patch,
-  
+
     // used for tests
     tmp
   ;
-  
+
   // IE11 disconnectedCallback issue #
   // to be tested before any createElement patch
   if (MutationObserver) {
@@ -738,10 +739,10 @@ function installCustomElements(window, polyfill) {'use strict';
     }).observe(tmp, {childList: true, subtree: true});
     tmp.innerHTML = "";
   }
-  
+
   // only if needed
   if (!V0) {
-  
+
     if (sPO || hasProto) {
         patchIfNotAlready = function (node, proto) {
           if (!iPO.call(proto, node)) {
@@ -758,7 +759,7 @@ function installCustomElements(window, polyfill) {'use strict';
         };
         patch = patchIfNotAlready;
     }
-  
+
     if (IE8) {
       doesNotSupportDOMAttrModified = false;
       (function (){
@@ -924,7 +925,16 @@ function installCustomElements(window, polyfill) {'use strict';
         };
       }
     }
-  
+
+    function patchConstructor(node, attrs) {
+      const constructorAttributes = Object.getOwnPropertyDescriptors(attrs)
+      for(const p in constructorAttributes) {
+        if(p !== 'length' && p !== 'name' && p !== 'prototype') {
+          Object.defineProperty(node.constructor, p, constructorAttributes[p])
+        }
+      }
+    }
+
     // set as enumerable, writable and configurable
     document[REGISTER_ELEMENT] = function registerElement(type, options) {
       upperType = type.toUpperCase();
@@ -986,10 +996,10 @@ function installCustomElements(window, polyfill) {'use strict';
           document[ADD_EVENT_LISTENER]('DOMNodeInserted', onDOMNode(ATTACHED));
           document[ADD_EVENT_LISTENER]('DOMNodeRemoved', onDOMNode(DETACHED));
         }
-  
+
         document[ADD_EVENT_LISTENER](DOM_CONTENT_LOADED, onReadyStateChange);
         document[ADD_EVENT_LISTENER]('readystatechange', onReadyStateChange);
-  
+
         document.importNode = function (node, deep) {
           switch (node.nodeType) {
             case 1:
@@ -1007,25 +1017,25 @@ function installCustomElements(window, polyfill) {'use strict';
               return cloneNode.call(node, !!deep);
           }
         };
-  
+
         HTMLElementPrototype.cloneNode = function (deep) {
           return setupAll(this, cloneNode, [!!deep]);
         };
       }
-  
+
       if (justSetup) return (justSetup = false);
-  
+
       if (-2 < (
         indexOf.call(types, PREFIX_IS + upperType) +
         indexOf.call(types, PREFIX_TAG + upperType)
       )) {
         throwTypeError(type);
       }
-  
+
       if (!validName.test(upperType) || -1 < indexOf.call(invalidNames, upperType)) {
         throw new Error('The type ' + type + ' is invalid');
       }
-  
+
       var
         constructor = function () {
           return extending ?
@@ -1038,34 +1048,35 @@ function installCustomElements(window, polyfill) {'use strict';
         upperType,
         i
       ;
-  
+
       if (extending && -1 < (
         indexOf.call(types, PREFIX_TAG + nodeName)
       )) {
         throwTypeError(nodeName);
       }
-  
+
       i = types.push((extending ? PREFIX_IS : PREFIX_TAG) + upperType) - 1;
-  
+
       query = query.concat(
         query.length ? ',' : '',
         extending ? nodeName + '[is="' + type.toLowerCase() + '"]' : nodeName
       );
-  
+
       constructor.prototype = (
         protos[i] = hOP.call(opt, 'prototype') ?
           opt.prototype :
           create(HTMLElementPrototype)
       );
-  
+
       if (query.length) loopAndVerify(
         document.querySelectorAll(query),
         ATTACHED
       );
-  
+
+      constrs[i] = constructor;
       return constructor;
     };
-  
+
     document.createElement = (patchedCreateElement = function (localName, typeExtension) {
       var
         is = getIs(typeExtension),
@@ -1087,12 +1098,17 @@ function installCustomElements(window, polyfill) {'use strict';
         }
       }
       notFromInnerHTMLHelper = !document.createElement.innerHTMLHelper;
+      // Patch constructor
+      if(constrs[i]) {
+        patchConstructor(node, constrs[i])
+      }
       if (setup) patch(node, protos[i]);
+
       return node;
     });
-  
+
   }
-  
+
   // needed due unbelievable IE11 behavior
   // https://github.com/WebReflection/document-register-element/issues/175#issuecomment-520904688
   addEventListener(
@@ -1104,7 +1120,7 @@ function installCustomElements(window, polyfill) {'use strict';
     },
     false
   );
-  
+
   function ASAP() {
     var queue = asapQueue.splice(0, asapQueue.length);
     asapTimer = 0;
@@ -1114,20 +1130,20 @@ function installCustomElements(window, polyfill) {'use strict';
       );
     }
   }
-  
+
   function loopAndVerify(list, action) {
     for (var i = 0, length = list.length; i < length; i++) {
       verifyAndSetupAndAction(list[i], action);
     }
   }
-  
+
   function loopAndSetup(list) {
     for (var i = 0, length = list.length, node; i < length; i++) {
       node = list[i];
       patch(node, protos[getTypeIndex(node)]);
     }
   }
-  
+
   function executeAction(action) {
     return function (node) {
       if (isValidNode(node)) {
@@ -1139,7 +1155,7 @@ function installCustomElements(window, polyfill) {'use strict';
       }
     };
   }
-  
+
   function getTypeIndex(target) {
     var
       is = getAttribute.call(target, 'is'),
@@ -1153,11 +1169,11 @@ function installCustomElements(window, polyfill) {'use strict';
     ;
     return is && -1 < i && !isInQSA(nodeName, is) ? -1 : i;
   }
-  
+
   function isInQSA(name, type) {
     return -1 < query.indexOf(name + '[is="' + type + '"]');
   }
-  
+
   function onDOMAttrModified(e) {
     var
       node = e.currentTarget,
@@ -1185,7 +1201,7 @@ function installCustomElements(window, polyfill) {'use strict';
       );
     }
   }
-  
+
   function onDOMNode(action) {
     var executor = executeAction(action);
     return function (e) {
@@ -1194,7 +1210,7 @@ function installCustomElements(window, polyfill) {'use strict';
       asapTimer = setTimeout(ASAP, 1);
     };
   }
-  
+
   function onReadyStateChange(e) {
     if (dropDomContentLoaded) {
       dropDomContentLoaded = false;
@@ -1206,14 +1222,14 @@ function installCustomElements(window, polyfill) {'use strict';
     );
     if (IE8) purge();
   }
-  
+
   function patchedSetAttribute(name, value) {
     // jshint validthis:true
     var self = this;
     setAttribute.call(self, name, value);
     onSubtreeModified.call(self, {target: self});
   }
-  
+
   function setupAll(context, callback, args) {
     var
       node = callback.apply(context, args),
@@ -1224,7 +1240,7 @@ function installCustomElements(window, polyfill) {'use strict';
       loopAndSetup(node.querySelectorAll(query));
     return node;
   }
-  
+
   function setupNode(node, proto) {
     setPrototype(node, proto);
     if (observer) {
@@ -1243,7 +1259,7 @@ function installCustomElements(window, polyfill) {'use strict';
       node.created = false;
     }
   }
-  
+
   function purge() {
     for (var
       node,
@@ -1259,11 +1275,11 @@ function installCustomElements(window, polyfill) {'use strict';
       }
     }
   }
-  
+
   function throwTypeError(type) {
     throw new Error('A ' + type + ' type is already registered');
   }
-  
+
   function verifyAndSetupAndAction(node, action) {
     var
       fn,
@@ -1293,10 +1309,10 @@ function installCustomElements(window, polyfill) {'use strict';
       ))) fn.call(node);
     }
   }
-  
+
   // V1 in da House!
   function CustomElementRegistry() {}
-  
+
   CustomElementRegistry.prototype = {
     constructor: CustomElementRegistry,
     // a workaround for the stubborn WebKit
@@ -1329,7 +1345,7 @@ function installCustomElements(window, polyfill) {'use strict';
       } :
       whenDefined
   };
-  
+
   function CERDefine(name, Class, options) {
     var
       is = options && options[EXTENDS] || '',
@@ -1384,17 +1400,17 @@ function installCustomElements(window, polyfill) {'use strict';
     whenDefined(name);
     waitingList[name].r();
   }
-  
+
   function get(name) {
     var info = constructors[name.toUpperCase()];
     return info && info.constructor;
   }
-  
+
   function getIs(options) {
     return typeof options === 'string' ?
         options : (options && options.is || '');
   }
-  
+
   function notifyAttributes(self) {
     var
       callback = self[ATTRIBUTE_CHANGED_CALLBACK],
@@ -1412,7 +1428,7 @@ function installCustomElements(window, polyfill) {'use strict';
       );
     }
   }
-  
+
   function whenDefined(name) {
     name = name.toUpperCase();
     if (!(name in waitingList)) {
@@ -1423,7 +1439,7 @@ function installCustomElements(window, polyfill) {'use strict';
     }
     return waitingList[name].p;
   }
-  
+
   function polyfillV1() {
     if (customElements) delete window.customElements;
     defineProperty(window, 'customElements', {
@@ -1479,7 +1495,7 @@ function installCustomElements(window, polyfill) {'use strict';
       document[REGISTER_ELEMENT]('');
     }
   }
-  
+
   // if customElements is not there at all
   if (!customElements || /^force/.test(polyfill.type)) polyfillV1();
   else if(!polyfill.noBuiltIn) {
@@ -1510,7 +1526,7 @@ function installCustomElements(window, polyfill) {'use strict';
       polyfillV1();
     }
   }
-  
+
   // FireFox only issue
   if(!polyfill.noBuiltIn) {
     try {
@@ -1522,7 +1538,7 @@ function installCustomElements(window, polyfill) {'use strict';
       };
     }
   }
-  
+
 }
 
 module.exports = installCustomElements;
