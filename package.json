@@ -1,7 +1,7 @@
 {
   "version": "1.14.10",
   "license": "ISC",
-  "name": "document-register-element",
+  "name": "@pulsar-edit/document-register-element",
   "description": "A stand-alone working lightweight version of the W3C Custom Elements specification",
   "homepage": "https://github.com/pulsar-edit/document-register-element",
   "keywords": [
