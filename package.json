@@ -31,13 +31,13 @@
   "module": "./build/document-register-element.js",
   "unpkg": "./build/document-register-element.js",
   "scripts": {
-    "test": "phantomjs testrunner.js",
+    "test": "node testrunner.js",
     "web": "tiny-cdn run -p=1337"
   },
   "devDependencies": {
     "html-class": "^1.2.0",
     "jshint": "^2.10.2",
-    "phantomjs-prebuilt": "^2.1.14",
+    "puppeteer": "^24.43.1",
     "tiny-cdn": "^0.7.0",
     "uglify-js": "^2.8.29",
     "wru": "^0.3.0"
